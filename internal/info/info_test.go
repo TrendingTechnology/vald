@@ -47,7 +47,7 @@ func TestString(t *testing.T) {
 	}
 	tests := []test{
 		{
-			name: "string return valid string with no stacktrace initialized",
+			name: "return valid string with no stacktrace initialized",
 			beforeFunc: func() {
 				rtCaller = func(skip int) (pc uintptr, file string, line int, ok bool) {
 					return uintptr(0), "", 0, false
@@ -102,7 +102,7 @@ func TestGet(t *testing.T) {
 	}
 	tests := []test{
 		{
-			name: "get return detail object",
+			name: "return detail object",
 			beforeFunc: func() {
 				rtCaller = func(skip int) (pc uintptr, file string, line int, ok bool) {
 					return uintptr(0), "", 0, false
@@ -183,7 +183,7 @@ func TestDetail_String(t *testing.T) {
 	}
 	tests := []test{
 		{
-			name: "string return correct string",
+			name: "return correct string when stacktrace is initialized",
 			fields: fields{
 				Version:           "1.0",
 				ServerName:        "srv",
@@ -210,7 +210,7 @@ func TestDetail_String(t *testing.T) {
 			},
 		},
 		{
-			name: "string return valid string with no stacktrace initialized",
+			name: "return valid string when no stacktrace initialized",
 			fields: fields{
 				Version:           "1.0",
 				ServerName:        "srv",
@@ -308,7 +308,7 @@ func TestDetail_Get(t *testing.T) {
 	}
 	tests := []test{
 		{
-			name: "get return detail object",
+			name: "return detail object",
 			beforeFunc: func() {
 				rtCaller = func(skip int) (pc uintptr, file string, line int, ok bool) {
 					return uintptr(0), "", 0, false
@@ -333,7 +333,7 @@ func TestDetail_Get(t *testing.T) {
 			},
 		},
 		{
-			name: "get return detail object with stacktrace",
+			name: "return detail object when stacktrace is initialized",
 			beforeFunc: func() {
 				i := 0
 				rtCaller = func(skip int) (pc uintptr, file string, line int, ok bool) {
@@ -374,7 +374,7 @@ func TestDetail_Get(t *testing.T) {
 			},
 		},
 		{
-			name: "get return detail object with file name has goroot prefix",
+			name: "return detail object when file name has goroot prefix",
 			beforeFunc: func() {
 				i := 0
 				rtCaller = func(skip int) (pc uintptr, file string, line int, ok bool) {
@@ -415,7 +415,7 @@ func TestDetail_Get(t *testing.T) {
 			},
 		},
 		{
-			name: "get return detail object with go mod path",
+			name: "return detail object when go mod path is set",
 			beforeFunc: func() {
 				i := 0
 				rtCaller = func(skip int) (pc uintptr, file string, line int, ok bool) {
@@ -456,7 +456,7 @@ func TestDetail_Get(t *testing.T) {
 			},
 		},
 		{
-			name: "get return detail object with go mod path with version",
+			name: "return detail object when go mod path with version is set",
 			beforeFunc: func() {
 				i := 0
 				rtCaller = func(skip int) (pc uintptr, file string, line int, ok bool) {
@@ -497,7 +497,7 @@ func TestDetail_Get(t *testing.T) {
 			},
 		},
 		{
-			name: "get return detail object with go mod path with 2 version",
+			name: "return detail object when go mod path contains pseudo version",
 			beforeFunc: func() {
 				i := 0
 				rtCaller = func(skip int) (pc uintptr, file string, line int, ok bool) {
@@ -538,7 +538,7 @@ func TestDetail_Get(t *testing.T) {
 			},
 		},
 		{
-			name: "get return detail object with go src path",
+			name: "return detail object when go src path is set",
 			beforeFunc: func() {
 				i := 0
 				rtCaller = func(skip int) (pc uintptr, file string, line int, ok bool) {
