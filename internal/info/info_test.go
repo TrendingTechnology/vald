@@ -49,12 +49,12 @@ func TestString(t *testing.T) {
 		{
 			name: "return valid string with no stacktrace initialized",
 			beforeFunc: func() {
-				rtCaller = func(skip int) (pc uintptr, file string, line int, ok bool) {
+				detail.rtCaller = func(skip int) (pc uintptr, file string, line int, ok bool) {
 					return uintptr(0), "", 0, false
 				}
 			},
 			afterFunc: func() {
-				rtCaller = runtime.Caller
+				detail.rtCaller = runtime.Caller
 			},
 			want: want{
 				want: "\nbuild cpu info flags -> []\nbuild time           -> \ncgo enabled          -> \ngit commit           -> master\ngo arch              -> " + runtime.GOARCH + "\ngo os                -> " + runtime.GOOS + "\ngo version           -> " + runtime.Version() + "\nngt version          -> \nserver name          -> \nvald version         -> \x1b[1m\x1b[22m",
@@ -104,12 +104,12 @@ func TestGet(t *testing.T) {
 		{
 			name: "return detail object",
 			beforeFunc: func() {
-				rtCaller = func(skip int) (pc uintptr, file string, line int, ok bool) {
+				detail.rtCaller = func(skip int) (pc uintptr, file string, line int, ok bool) {
 					return uintptr(0), "", 0, false
 				}
 			},
 			afterFunc: func() {
-				rtCaller = runtime.Caller
+				detail.rtCaller = runtime.Caller
 			},
 			want: want{
 				want: Detail{
@@ -224,14 +224,9 @@ func TestDetail_String(t *testing.T) {
 				BuildCPUInfoFlags: nil,
 				StackTrace:        []StackTrace{},
 				PrepOnce:          sync.Once{},
-			},
-			beforeFunc: func() {
-				rtCaller = func(skip int) (pc uintptr, file string, line int, ok bool) {
+				rtCaller: func(skip int) (pc uintptr, file string, line int, ok bool) {
 					return uintptr(0), "", 0, false
-				}
-			},
-			afterFunc: func() {
-				rtCaller = runtime.Caller
+				},
 			},
 			want: want{
 				want: "\nbuild cpu info flags -> []\nbuild time           -> bt\ncgo enabled          -> true\ngit commit           -> commit\ngo arch              -> goarch\ngo os                -> goos\ngo version           -> 1.1\nngt version          -> 1.2\nserver name          -> srv\nvald version         -> \x1b[1m1.0\x1b[22m",
@@ -288,6 +283,8 @@ func TestDetail_Get(t *testing.T) {
 		BuildCPUInfoFlags []string
 		StackTrace        []StackTrace
 		PrepOnce          sync.Once
+		rtCaller          func(skip int) (pc uintptr, file string, line int, ok bool)
+		rtFuncForPC       func(pc uintptr) *runtime.Func
 	}
 	type want struct {
 		want Detail
@@ -309,13 +306,10 @@ func TestDetail_Get(t *testing.T) {
 	tests := []test{
 		{
 			name: "return detail object",
-			beforeFunc: func() {
-				rtCaller = func(skip int) (pc uintptr, file string, line int, ok bool) {
+			fields: fields{
+				rtCaller: func(skip int) (pc uintptr, file string, line int, ok bool) {
 					return uintptr(0), "", 0, false
-				}
-			},
-			afterFunc: func() {
-				rtCaller = runtime.Caller
+				},
 			},
 			want: want{
 				want: Detail{
@@ -334,23 +328,21 @@ func TestDetail_Get(t *testing.T) {
 		},
 		{
 			name: "return detail object when stacktrace is initialized",
-			beforeFunc: func() {
+			fields: func() fields {
 				i := 0
-				rtCaller = func(skip int) (pc uintptr, file string, line int, ok bool) {
-					if i == 0 {
-						i++
-						return uintptr(0), "info.go", 100, true
-					}
-					return uintptr(1), "info.go", 100, false
+				return fields{
+					rtCaller: func(skip int) (pc uintptr, file string, line int, ok bool) {
+						if i == 0 {
+							i++
+							return uintptr(0), "info.go", 100, true
+						}
+						return uintptr(1), "info.go", 100, false
+					},
+					rtFuncForPC: func(uintptr) *runtime.Func {
+						return runtime.FuncForPC(reflect.ValueOf(TestDetail_Get).Pointer())
+					},
 				}
-				rtFuncForPC = func(uintptr) *runtime.Func {
-					return runtime.FuncForPC(reflect.ValueOf(TestDetail_Get).Pointer())
-				}
-			},
-			afterFunc: func() {
-				rtCaller = runtime.Caller
-				rtFuncForPC = runtime.FuncForPC
-			},
+			}(),
 			want: want{
 				want: Detail{
 					GitCommit: "master",
@@ -375,23 +367,21 @@ func TestDetail_Get(t *testing.T) {
 		},
 		{
 			name: "return detail object when file name has goroot prefix",
-			beforeFunc: func() {
+			fields: func() fields {
 				i := 0
-				rtCaller = func(skip int) (pc uintptr, file string, line int, ok bool) {
-					if i == 0 {
-						i++
-						return uintptr(0), runtime.GOROOT() + "/src/info.go", 100, true
-					}
-					return uintptr(1), "info.go", 100, false
+				return fields{
+					rtCaller: func(skip int) (pc uintptr, file string, line int, ok bool) {
+						if i == 0 {
+							i++
+							return uintptr(0), runtime.GOROOT() + "/src/info.go", 100, true
+						}
+						return uintptr(1), "info.go", 100, false
+					},
+					rtFuncForPC: func(uintptr) *runtime.Func {
+						return runtime.FuncForPC(reflect.ValueOf(TestDetail_Get).Pointer())
+					},
 				}
-				rtFuncForPC = func(uintptr) *runtime.Func {
-					return runtime.FuncForPC(reflect.ValueOf(TestDetail_Get).Pointer())
-				}
-			},
-			afterFunc: func() {
-				rtCaller = runtime.Caller
-				rtFuncForPC = runtime.FuncForPC
-			},
+			}(),
 			want: want{
 				want: Detail{
 					GitCommit: "master",
@@ -416,23 +406,21 @@ func TestDetail_Get(t *testing.T) {
 		},
 		{
 			name: "return detail object when go mod path is set",
-			beforeFunc: func() {
+			fields: func() fields {
 				i := 0
-				rtCaller = func(skip int) (pc uintptr, file string, line int, ok bool) {
-					if i == 0 {
-						i++
-						return uintptr(0), "/tmp/go/pkg/mod/github.com/vdaas/vald/internal/info.go", 100, true
-					}
-					return uintptr(1), "info.go", 100, false
+				return fields{
+					rtCaller: func(skip int) (pc uintptr, file string, line int, ok bool) {
+						if i == 0 {
+							i++
+							return uintptr(0), "/tmp/go/pkg/mod/github.com/vdaas/vald/internal/info.go", 100, true
+						}
+						return uintptr(1), "info.go", 100, false
+					},
+					rtFuncForPC: func(uintptr) *runtime.Func {
+						return runtime.FuncForPC(reflect.ValueOf(TestDetail_Get).Pointer())
+					},
 				}
-				rtFuncForPC = func(uintptr) *runtime.Func {
-					return runtime.FuncForPC(reflect.ValueOf(TestDetail_Get).Pointer())
-				}
-			},
-			afterFunc: func() {
-				rtCaller = runtime.Caller
-				rtFuncForPC = runtime.FuncForPC
-			},
+			}(),
 			want: want{
 				want: Detail{
 					GitCommit: "master",
@@ -457,19 +445,21 @@ func TestDetail_Get(t *testing.T) {
 		},
 		{
 			name: "return detail object when go mod path with version is set",
-			beforeFunc: func() {
+			fields: func() fields {
 				i := 0
-				rtCaller = func(skip int) (pc uintptr, file string, line int, ok bool) {
-					if i == 0 {
-						i++
-						return uintptr(0), "/tmp/go/pkg/mod/github.com/vdaas@v0.0.0-20171023180738-a3a6125de932/vald/internal/info.go", 100, true
-					}
-					return uintptr(1), "info.go", 100, false
+				return fields{
+					rtCaller: func(skip int) (pc uintptr, file string, line int, ok bool) {
+						if i == 0 {
+							i++
+							return uintptr(0), "/tmp/go/pkg/mod/github.com/vdaas@v0.0.0-20171023180738-a3a6125de932/vald/internal/info.go", 100, true
+						}
+						return uintptr(1), "info.go", 100, false
+					},
+					rtFuncForPC: func(uintptr) *runtime.Func {
+						return runtime.FuncForPC(reflect.ValueOf(TestDetail_Get).Pointer())
+					},
 				}
-				rtFuncForPC = func(uintptr) *runtime.Func {
-					return runtime.FuncForPC(reflect.ValueOf(TestDetail_Get).Pointer())
-				}
-			},
+			}(),
 			afterFunc: func() {
 				rtCaller = runtime.Caller
 				rtFuncForPC = runtime.FuncForPC
@@ -498,23 +488,21 @@ func TestDetail_Get(t *testing.T) {
 		},
 		{
 			name: "return detail object when go mod path contains pseudo version",
-			beforeFunc: func() {
+			fields: func() fields {
 				i := 0
-				rtCaller = func(skip int) (pc uintptr, file string, line int, ok bool) {
-					if i == 0 {
-						i++
-						return uintptr(0), "/tmp/go/pkg/mod/github.com/vdaas@v0.0.0-20171023180738-a3a6125de932-a843423387/vald/internal/info.go", 100, true
-					}
-					return uintptr(1), "info.go", 100, false
+				return fields{
+					rtCaller: func(skip int) (pc uintptr, file string, line int, ok bool) {
+						if i == 0 {
+							i++
+							return uintptr(0), "/tmp/go/pkg/mod/github.com/vdaas@v0.0.0-20171023180738-a3a6125de932-a843423387/vald/internal/info.go", 100, true
+						}
+						return uintptr(1), "info.go", 100, false
+					},
+					rtFuncForPC: func(uintptr) *runtime.Func {
+						return runtime.FuncForPC(reflect.ValueOf(TestDetail_Get).Pointer())
+					},
 				}
-				rtFuncForPC = func(uintptr) *runtime.Func {
-					return runtime.FuncForPC(reflect.ValueOf(TestDetail_Get).Pointer())
-				}
-			},
-			afterFunc: func() {
-				rtCaller = runtime.Caller
-				rtFuncForPC = runtime.FuncForPC
-			},
+			}(),
 			want: want{
 				want: Detail{
 					GitCommit: "master",
@@ -539,23 +527,21 @@ func TestDetail_Get(t *testing.T) {
 		},
 		{
 			name: "return detail object when go src path is set",
-			beforeFunc: func() {
+			fields: func() fields {
 				i := 0
-				rtCaller = func(skip int) (pc uintptr, file string, line int, ok bool) {
-					if i == 0 {
-						i++
-						return uintptr(0), "/tmp/go/src/github.com/vdaas/vald/internal/info.go", 100, true
-					}
-					return uintptr(1), "info.go", 100, false
+				return fields{
+					rtCaller: func(skip int) (pc uintptr, file string, line int, ok bool) {
+						if i == 0 {
+							i++
+							return uintptr(0), "/tmp/go/src/github.com/vdaas/vald/internal/info.go", 100, true
+						}
+						return uintptr(1), "info.go", 100, false
+					},
+					rtFuncForPC: func(uintptr) *runtime.Func {
+						return runtime.FuncForPC(reflect.ValueOf(TestDetail_Get).Pointer())
+					},
 				}
-				rtFuncForPC = func(uintptr) *runtime.Func {
-					return runtime.FuncForPC(reflect.ValueOf(TestDetail_Get).Pointer())
-				}
-			},
-			afterFunc: func() {
-				rtCaller = runtime.Caller
-				rtFuncForPC = runtime.FuncForPC
-			},
+			}(),
 			want: want{
 				want: Detail{
 					GitCommit: "master",
