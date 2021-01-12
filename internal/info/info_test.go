@@ -226,6 +226,10 @@ func TestInit(t *testing.T) {
 				NGTVersion = "v1.11.6"
 				BuildCPUInfoFlags = "\t\tavx512f avx512dq\t"
 			},
+			afterFunc: func(args) {
+				once = sync.Once{}
+				infoProvider = nil
+			},
 		},
 	}
 
@@ -288,7 +292,7 @@ func TestNew(t *testing.T) {
 	}
 	tests := []test{
 		{
-			name: "new returns default info without option",
+			name: "return default info when option is empty",
 			args: args{
 				opts: nil,
 			},
@@ -315,24 +319,23 @@ func TestNew(t *testing.T) {
 			},
 		},
 		{
-			name: "new returns info with 1 option",
+			name: "returns info when 1 option is set",
 			args: args{
 				opts: []Option{
-					WithServerName("sn"),
+					WithServerName("vald"),
 				},
 			},
 			want: want{
 				want: &info{
 					detail: Detail{
-						ServerName: "sn",
-						Version:    GitCommit,
-						GitCommit:  GitCommit,
-						BuildTime:  BuildTime,
-						GoVersion:  runtime.Version(),
-						GoOS:       runtime.GOOS,
-						GoArch:     runtime.GOARCH,
-						CGOEnabled: CGOEnabled,
-						//StackTrace:        nil,
+						ServerName:        "vald",
+						Version:           GitCommit,
+						GitCommit:         GitCommit,
+						BuildTime:         BuildTime,
+						GoVersion:         runtime.Version(),
+						GoOS:              runtime.GOOS,
+						GoArch:            runtime.GOARCH,
+						CGOEnabled:        CGOEnabled,
 						NGTVersion:        NGTVersion,
 						BuildCPUInfoFlags: strings.Split(strings.TrimSpace(BuildCPUInfoFlags), " "),
 					},
@@ -346,12 +349,12 @@ func TestNew(t *testing.T) {
 			},
 		},
 		{
-			name: "new returns info with multiple option",
+			name: "returns info when multiple options are set",
 			args: args{
 				opts: []Option{
-					WithServerName("sn"),
+					WithServerName("vald"),
 					func(i *info) error {
-						i.detail.Version = "ver"
+						i.detail.Version = "v1.0.0"
 						return nil
 					},
 				},
@@ -359,15 +362,14 @@ func TestNew(t *testing.T) {
 			want: want{
 				want: &info{
 					detail: Detail{
-						ServerName: "sn",
-						Version:    "ver",
-						GitCommit:  GitCommit,
-						BuildTime:  BuildTime,
-						GoVersion:  runtime.Version(),
-						GoOS:       runtime.GOOS,
-						GoArch:     runtime.GOARCH,
-						CGOEnabled: CGOEnabled,
-						//StackTrace:        nil,
+						ServerName:        "vald",
+						Version:           "v1.0.0",
+						GitCommit:         GitCommit,
+						BuildTime:         BuildTime,
+						GoVersion:         runtime.Version(),
+						GoOS:              runtime.GOOS,
+						GoArch:            runtime.GOARCH,
+						CGOEnabled:        CGOEnabled,
 						NGTVersion:        NGTVersion,
 						BuildCPUInfoFlags: strings.Split(strings.TrimSpace(BuildCPUInfoFlags), " "),
 					},
@@ -381,7 +383,7 @@ func TestNew(t *testing.T) {
 			},
 		},
 		{
-			name: "new log the error when invalid option occurred",
+			name: "log the error when invalid option is set",
 			args: args{
 				opts: []Option{
 					func(i *info) error {
@@ -392,14 +394,13 @@ func TestNew(t *testing.T) {
 			want: want{
 				want: &info{
 					detail: Detail{
-						Version:    GitCommit,
-						GitCommit:  GitCommit,
-						BuildTime:  BuildTime,
-						GoVersion:  runtime.Version(),
-						GoOS:       runtime.GOOS,
-						GoArch:     runtime.GOARCH,
-						CGOEnabled: CGOEnabled,
-						//StackTrace:        nil,
+						Version:           GitCommit,
+						GitCommit:         GitCommit,
+						BuildTime:         BuildTime,
+						GoVersion:         runtime.Version(),
+						GoOS:              runtime.GOOS,
+						GoArch:            runtime.GOARCH,
+						CGOEnabled:        CGOEnabled,
 						NGTVersion:        NGTVersion,
 						BuildCPUInfoFlags: strings.Split(strings.TrimSpace(BuildCPUInfoFlags), " "),
 					},
@@ -413,7 +414,7 @@ func TestNew(t *testing.T) {
 			},
 		},
 		{
-			name: "new return error when criical error occurred",
+			name: "return error when criical error occurred",
 			args: args{
 				opts: []Option{
 					func(i *info) error {
@@ -475,7 +476,7 @@ func Test_info_String(t *testing.T) {
 	}
 	tests := []test{
 		{
-			name: "return correct string when stacktrace is initialized",
+			name: "return string when stacktrace is initialized",
 			fields: fields{
 				detail: Detail{
 					Version:           "1.0",
@@ -503,7 +504,7 @@ func Test_info_String(t *testing.T) {
 			},
 		},
 		{
-			name: "return valid string when no stacktrace initialized",
+			name: "return string when no stacktrace initialized",
 			fields: fields{
 				detail: Detail{
 					Version:           "1.0",
@@ -917,7 +918,7 @@ func Test_info_prepare(t *testing.T) {
 			},
 		},
 		{
-			name: "GitCommit and Version field is not overwritten when GitCommit field is `internal`",
+			name: "GitCommit field is not overwritten when GitCommit field is `internal`",
 			fields: fields{
 				detail: Detail{
 					GitCommit: "internal",
