@@ -1,6 +1,6 @@
 ---
 #
-# Copyright (C) 2019-2020 Vdaas.org Vald team ( kpango, rinx, kmrmt )
+# Copyright (C) 2019-2021 vdaas.org vald team <vald@vdaas.org>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,10 +21,10 @@ metadata:
   labels:
     app: vald-meta
     app.kubernetes.io/name: vald
-    helm.sh/chart: vald-v0.0.63
+    helm.sh/chart: vald-v0.0.66
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: RELEASE-NAME
-    app.kubernetes.io/version: v0.0.63
+    app.kubernetes.io/version: v0.0.66
     app.kubernetes.io/component: meta
 spec:
   progressDeadlineSeconds: 600
@@ -46,7 +46,7 @@ spec:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/component: meta
       annotations:
-        checksum/configmap: f8ae7cd0257bef2005545788b4eca02e474ab69caa3f8a0aa6a8b16c6f46fa85
+        checksum/configmap: 4fa8023db018d3ce72cc5d7bdf566f03c6f964a7315416b4f5ad76d7b1b06292
         profefe.com/enable: "true"
         profefe.com/port: "6060"
         profefe.com/service: vald-meta
@@ -147,5 +147,5 @@ spec:
           configMap:
             defaultMode: 420
             name: vald-meta-config
-      priorityClassName: vald-meta-priority
+      priorityClassName: default-vald-meta-priority
 status:
