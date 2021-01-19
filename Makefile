@@ -64,6 +64,7 @@ HELM_VERSION         ?= v3.4.2
 HELM_DOCS_VERSION    ?= 1.4.0
 VALDCLI_VERSION      ?= v0.0.62
 TELEPRESENCE_VERSION ?= 0.108
+KUBELINTER_VERSION   ?= 0.1.6
 
 SWAP_DEPLOYMENT_TYPE ?= deployment
 SWAP_IMAGE           ?= ""
@@ -149,6 +150,8 @@ PORT      ?= 80
 NUMBER    ?= 10
 DIMENSION ?= 6
 NUMPANES  ?= 4
+MEAN      ?= 0.0
+STDDEV    ?= 1.0
 
 BODY = ""
 
@@ -362,9 +365,7 @@ goimports/install:
 
 .PHONY: prettier/install
 prettier/install:
-	if !type prettier >/dev/null 2>&1; then \
-		npm install -g npm prettier; \
-	fi
+	type prettier || npm install -g prettier
 
 .PHONY: version/vald
 ## print vald version

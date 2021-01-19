@@ -20,12 +20,14 @@ package grpc
 import (
 	"context"
 	"io"
+	"os"
 	"runtime"
 	"sync"
 
 	"github.com/vdaas/vald/internal/errgroup"
 	"github.com/vdaas/vald/internal/errors"
 	"github.com/vdaas/vald/internal/log"
+	"github.com/vdaas/vald/internal/net/grpc/status"
 	"github.com/vdaas/vald/internal/safety"
 	"google.golang.org/grpc"
 )
@@ -46,34 +48,68 @@ func BidirectionalStream(ctx context.Context, stream grpc.ServerStream,
 
 	errMap := sync.Map{}
 
+	finalize := func() error {
+		var errs error
+		err = eg.Wait()
+		if err != nil {
+			errs = errors.Wrap(errs, err.Error())
+			log.Error(err)
+		}
+		var gerrs *errors.Errors_RPC
+		errMap.Range(func(m, e interface{}) bool {
+			err, ok := e.(error)
+			if !ok || err == nil {
+				return true
+			}
+			errs = errors.Wrap(errs, err.Error())
+			gerr := status.FromError(err)
+			if msg, ok := m.(string); ok && gerr == nil {
+				hostname, err := os.Hostname()
+				if err != nil {
+					log.Warn("failed to fetch hostname:", err)
+				}
+				gerr = &errors.Errors_RPC{
+					Type:     status.Unknown.String(),
+					Msg:      msg,
+					Instance: hostname,
+				}
+			}
+			if gerr == nil {
+				return true
+			}
+			if gerrs == nil {
+				gerrs = gerr
+				return true
+			}
+			if gerrs.Roots == nil {
+				gerr.Roots = make([]*errors.Errors_RPC, concurrency)
+			}
+			gerrs.Roots = append(gerrs.Roots, gerr)
+			return true
+		})
+		if errs == nil {
+			return nil
+		}
+		st, err := status.New(status.Unknown, errs.Error()).WithDetails(gerrs)
+		if err != nil {
+			log.Warn(err)
+		}
+		return st.Err()
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
-			err = eg.Wait()
-			if err != nil {
-				log.Error(err)
-				return err
-			}
-			return nil
+			return finalize()
 		default:
 			data := newData()
 			err = stream.RecvMsg(data)
 			if err != nil {
-				if err == io.EOF {
-					err = eg.Wait()
-					if err != nil {
-						log.Error(err)
-						return err
-					}
-					var errs error
-					errMap.Range(func(_, err interface{}) bool {
-						errs = errors.Wrap(errs, err.(error).Error())
-						return true
-					})
-					return errs
+				if err == io.EOF || errors.Is(err, io.EOF) {
+					return finalize()
 				}
-				log.Error(err)
-				return err
+				log.Errorf("failed to receive stream message %v", err)
+				return errors.Wrap(finalize(), err.Error())
 			}
 			if data != nil {
 				eg.Go(safety.RecoverWithoutPanicFunc(func() (err error) {
@@ -82,7 +118,6 @@ func BidirectionalStream(ctx context.Context, stream grpc.ServerStream,
 					if err != nil {
 						runtime.Gosched()
 						errMap.Store(err.Error(), err)
-						return nil
 					}
 					if res != nil {
 						mu.Lock()
