@@ -294,6 +294,7 @@ func (i *info) prepare() {
 	})
 }
 
+// String returns the stacktrace string.
 func (s StackTrace) String() string {
 	return fmt.Sprintf("URL: %s\tFile: %s\tLine: #%d\tFuncName: %s", s.URL, s.File, s.Line, s.FuncName)
 }
